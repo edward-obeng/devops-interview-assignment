@@ -4,10 +4,8 @@ version = "0.1.0"
 description = "Keycloak stale-user cleanup (take-home exercise)"
 requires-python = ">=3.11"
 dependencies = [
-    # Pick what you actually use. These are suggestions, not requirements.
-    # "httpx>=0.27",
-    # "python-keycloak>=4.0",
-    # "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
 ]
 
 [build-system]
