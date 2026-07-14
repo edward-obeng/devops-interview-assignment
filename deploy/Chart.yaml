@@ -1,0 +1,6 @@
+apiVersion: v2
+name: keycloak-stale-cleanup
+description: Periodic cleanup of stale (120+ day inactive) users in a Keycloak realm
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

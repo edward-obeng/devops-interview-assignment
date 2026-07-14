@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "keycloak-stale-cleanup.fullname" . }}
+  labels:
+    {{- include "keycloak-stale-cleanup.labels" . | nindent 4 }}
+  annotations:
+    # ArgoCD sync-wave: bump via values.argo.syncWave so this lands after
+    # Keycloak itself and the realm/service-account role grants exist.
+    argocd.argoproj.io/sync-wave: {{ .Values.argo.syncWave | quote }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "keycloak-stale-cleanup.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "keycloak-stale-cleanup.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          restartPolicy: {{ .Values.restartPolicy }}
+          containers:
+            - name: cleanup
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python", "-m", "cleaner.main"]
+              envFrom:
+                - configMapRef:
+                    name: {{ include "keycloak-stale-cleanup.fullname" . }}-config
+              env:
+                - name: KEYCLOAK_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "keycloak-stale-cleanup.secretName" . }}
+                      key: {{ .Values.keycloak.existingSecretKey }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}

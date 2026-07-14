@@ -1,0 +1,51 @@
+# One Helm release per realm. `realm` drives resource naming
+# ({{ .Values.realm }}-cleanup-*) — this is the multi-realm seam: to cover
+# another realm, `helm install <realm>-cleanup deploy/ --set realm=<realm> ...`
+# with that realm's own values, not a code change. See README point 4.
+realm: acme
+
+keycloak:
+  url: http://keycloak.keycloak.svc.cluster.local:8080
+  clientId: user-cleanup-service
+
+  # Secret handling for the client secret — never put a real one here.
+  # Preferred: point existingSecret at a Secret already in the cluster
+  # (created by ExternalSecrets, Sealed Secrets, or `kubectl create secret`
+  # out of band) with existingSecretKey holding the value.
+  existingSecret: ""
+  existingSecretKey: "client-secret"
+
+  # Fallback for local/demo use only. If existingSecret is unset, the chart
+  # creates a plain Secret from this value instead. Fine for `helm template`
+  # dry-runs against this take-home; never commit a real secret here.
+  clientSecret: ""
+
+cleanup:
+  inactivityDays: 120
+  dryRun: true
+  exclusions: "admin,break-glass"
+
+image:
+  repository: ghcr.io/example-org/keycloak-stale-cleanup
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Daily at 03:00 — stale-user check doesn't need to run more often than that.
+schedule: "0 3 * * *"
+concurrencyPolicy: Forbid
+successfulJobsHistoryLimit: 3
+failedJobsHistoryLimit: 3
+backoffLimit: 2
+restartPolicy: OnFailure
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# If deployed via ArgoCD, bump this so the CronJob lands after Keycloak
+# itself is up and the realm/service-account roles are provisioned.
+argo:
+  syncWave: "0"
+
+resources: {}
